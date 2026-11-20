@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="hr">
+<head><script>(function(w,i,g){w[g]=w[g]||[];if(typeof w[g].push=='function')w[g].push(i)})
+(window,'GTM-KL4FQVG','google_tags_first_party');</script><script>(function(w,d,s,l){w[l]=w[l]||[];(function(){w[l].push(arguments);})('set', 'developer_id.dY2E1Nz', true);
+		var f=d.getElementsByTagName(s)[0],
+		j=d.createElement(s);j.async=true;j.src='/cake/';
+		f.parentNode.insertBefore(j,f);
+		})(window,document,'script','dataLayer');</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator putarina za kamione</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--ink:#1b2430;--muted:#667085;--line:#e3e8ee;--accent:#0b5fff;--ok:#0a7d3b;--err:#b42318}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:14px 24px;background:#0f1b2d;color:#fff;display:flex;align-items:baseline;gap:12px}
+  header h1{margin:0;font-size:18px}
+  header span{color:#9fb0c8;font-size:13px}
+  main{display:grid;grid-template-columns:420px 1fr;gap:16px;padding:16px;max-width:1500px;margin:0 auto;height:calc(100vh - 56px)}
+  @media(max-width:900px){main{grid-template-columns:1fr;height:auto}#map{height:380px}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.03em}
+  input,select,button{font:inherit;width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  input:focus,select:focus{outline:2px solid #c7d8ff;border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ac{position:relative}
+  .ac ul{position:absolute;z-index:1000;left:0;right:0;top:100%;margin:2px 0 0;padding:0;list-style:none;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:240px;overflow:auto}
+  .ac li{padding:8px 10px;cursor:pointer;font-size:14px}
+  .ac li:hover{background:#eef3ff}
+  .btn{background:var(--accent);color:#fff;border:0;font-weight:600;margin-top:16px;cursor:pointer}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .link{background:none;border:0;color:var(--accent);width:auto;padding:0;margin-top:10px;cursor:pointer;font-size:13px}
+  #map{border-radius:12px;border:1px solid var(--line);min-height:400px}
+  .right{display:grid;grid-template-rows:minmax(300px,1fr) auto;gap:16px;min-height:0}
+  .total{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline}
+  .total .big{font-size:32px;font-weight:700;color:var(--ok)}
+  .total small{color:var(--muted);display:block}
+  table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .cty td{background:#f0f4fa;font-weight:600}
+  .err{color:var(--err);margin-top:12px}
+  .note{color:var(--muted);font-size:12px;margin-top:12px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<header><h1>Kalkulator putarina za kamione</h1><span>ruta · kilometraža · putarine po državama</span></header>
+<main>
+  <section class="panel">
+    <form id="f" autocomplete="off">
+      <label>Polazište</label>
+      <div class="ac"><input id="from" placeholder="npr. Zagreb, Hrvatska" required><ul class="hide"></ul></div>
+
+      <div id="viaWrap"></div>
+      <button type="button" class="link" id="addVia">+ Dodaj usputnu tačku</button>
+
+      <label>Odredište</label>
+      <div class="ac"><input id="to" placeholder="npr. München, Njemačka" required><ul class="hide"></ul></div>
+
+      <label>Vrsta vozila</label>
+      <select id="vtype">
+        <option value="straightTruck">Kamion (solo)</option>
+        <option value="tractor" selected>Tegljač (sa poluprikolicom)</option>
+      </select>
+      <div class="row">
+        <div><label>Ukupno osovina</label>
+          <select id="axles"><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option></select></div>
+        <div><label>Prikolica (br.)</label>
+          <select id="trailers"><option>0</option><option selected>1</option><option>2</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Ukupna masa (kg)</label><input id="weight" type="number" min="3500" max="60000" value="40000"></div>
+        <div><label>Visina (cm)</label><input id="height" type="number" min="150" max="500" value="400"></div>
+      </div>
+      <div class="row">
+        <div><label>Emisijska klasa</label>
+          <select id="euro">
+            <option value="euro6" selected>Euro VI</option><option value="euro5">Euro V</option>
+            <option value="euro4">Euro IV</option><option value="euro3">Euro III</option>
+            <option value="euro2">Euro II</option><option value="euro1">Euro I</option>
+            <option value="euro0">Euro 0</option>
+          </select></div>
+        <div><label>Valuta</label>
+          <select id="cur"><option>EUR</option><option>BAM</option><option>HRK</option><option>RSD</option><option>CHF</option><option>PLN</option><option>CZK</option><option>HUF</option></select></div>
+      </div>
+      <label>Tunelska kategorija (opasni teret)</label>
+      <select id="tunnel">
+        <option value="">Bez opasnog tereta</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option>
+      </select>
+      <label>Vrijeme polaska (opcionalno — neke putarine zavise od doba dana)</label>
+      <input id="dep" type="datetime-local">
+
+      <button class="btn" id="go">Izračunaj rutu i putarinu</button>
+    </form>
+    <div id="err" class="err hide"></div>
+    <p class="note">Ukupan broj osovina računa se za cijelu kombinaciju (tegljač + prikolica). Provjerite da odgovara vrsti naplate u državama kroz koje prolazite.</p>
+  </section>
+
+  <section class="right">
+    <div id="map"></div>
+    <div class="panel" id="out">
+      <div class="note">Unesite polazište, odredište i podatke o vozilu.</div>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const map = L.map('map').setView([46.5, 15], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'}).addTo(map);
+let layers = L.layerGroup().addTo(map);
+
+/* ---------- autocomplete ---------- */
+function attachAC(input){
+  const ul = input.parentElement.querySelector('ul');
+  let t; input.dataset.pos = '';
+  input.addEventListener('input', () => {
+    input.dataset.pos = '';
+    clearTimeout(t);
+    const q = input.value.trim();
+    if (q.length < 3) { ul.classList.add('hide'); return; }
+    t = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/geocode?q=' + encodeURIComponent(q));
+        const j = await r.json();
+        ul.innerHTML = '';
+        (j.items || []).forEach(it => {
+          const li = document.createElement('li');
+          li.textContent = it.title;
+          li.onclick = () => { input.value = it.title; input.dataset.pos = it.lat + ',' + it.lng; ul.classList.add('hide'); };
+          ul.appendChild(li);
+        });
+        ul.classList.toggle('hide', !ul.children.length);
+      } catch(e){}
+    }, 300);
+  });
+  document.addEventListener('click', e => { if (!input.parentElement.contains(e.target)) ul.classList.add('hide'); });
+}
+attachAC($('#from')); attachAC($('#to'));
+
+$('#addVia').onclick = () => {
+  const d = document.createElement('div');
+  d.innerHTML = '<label>Usputna tačka</label><div class="ac"><input class="via" placeholder="Grad / adresa"><ul class="hide"></ul></div>';
+  $('#viaWrap').appendChild(d);
+  attachAC(d.querySelector('input'));
+};
+
+/* ---------- HERE flexible polyline decoder ---------- */
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+function decodeFlex(s){
+  let i = 0;
+  const u = () => { let r = 0, sh = 0, v;
+    do { v = ALPHA.indexOf(s[i++]); r += (v & 31) * Math.pow(2, sh); sh += 5; } while (v & 32);
+    return r; };
+  const sg = x => (x % 2 ? -(x + 1) / 2 : x / 2);
+  u(); const h = u(); const f = Math.pow(10, h & 15), dim = (h >> 4) & 7;
+  let la = 0, ln = 0, z = 0; const out = [];
+  while (i < s.length){ la += sg(u()); ln += sg(u()); if (dim) z += sg(u()); out.push([la / f, ln / f]); }
+  return out;
+}
+
+/* ---------- geocode fallback if user did not pick a suggestion ---------- */
+async function resolve(input){
+  if (input.dataset.pos) return input.dataset.pos;
+  const r = await fetch('/api/geocode?q=' + encodeURIComponent(input.value.trim()));
+  const j = await r.json();
+  if (!j.items || !j.items.length) throw new Error('Lokacija nije pronađena: ' + input.value);
+  return j.items[0].lat + ',' + j.items[0].lng;
+}
+
+const money = (v, c) => new Intl.NumberFormat('hr-HR', {style:'currency', currency:c}).format(v);
+const fmtDur = s => { const h = Math.floor(s/3600), m = Math.round((s%3600)/60); return h + ' h ' + m + ' min'; };
+const countryName = c => { try { return new Intl.DisplayNames(['hr'], {type:'region'}).of(c.slice(0,2)); } catch(e){ return c; } };
+const iso3to2 = {AUT:'AT',DEU:'DE',HRV:'HR',SVN:'SI',HUN:'HU',SRB:'RS',BIH:'BA',MNE:'ME',MKD:'MK',BGR:'BG',ROU:'RO',ITA:'IT',FRA:'FR',CHE:'CH',CZE:'CZ',SVK:'SK',POL:'PL',ESP:'ES',PRT:'PT',GRC:'GR',BEL:'BE',NLD:'NL',LUX:'LU',DNK:'DK',SWE:'SE',NOR:'NO',FIN:'FI',LTU:'LT',LVA:'LV',EST:'EE',IRL:'IE',GBR:'GB',TUR:'TR',ALB:'AL',XKX:'XK'};
+
+$('#f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#err'); err.classList.add('hide');
+  const btn = $('#go'); btn.disabled = true; btn.textContent = 'Računam…';
+  try {
+    const p = new URLSearchParams({
+      origin: await resolve($('#from')),
+      destination: await resolve($('#to')),
+      type: $('#vtype').value, axles: $('#axles').value, trailers: $('#trailers').value,
+      weight: $('#weight').value, height: $('#height').value,
+      euro: $('#euro').value, currency: $('#cur').value
+    });
+    if ($('#tunnel').value) p.set('tunnel', $('#tunnel').value);
+    if ($('#dep').value) p.set('departureTime', new Date($('#dep').value).toISOString());
+    for (const v of document.querySelectorAll('.via')) if (v.value.trim()) p.append('via', await resolve(v));
+
+    const r = await fetch('/api/route?' + p);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Greška servera');
+    render(j, $('#cur').value);
+  } catch(ex){
+    err.textContent = ex.message; err.classList.remove('hide');
+  } finally { btn.disabled = false; btn.textContent = 'Izračunaj rutu i putarinu'; }
+});
+
+function render(data, cur){
+  const route = data.routes && data.routes[0];
+  if (!route) throw new Error('Ruta nije pronađena za ovo vozilo.');
+  layers.clearLayers();
+  let all = [], length = 0, dur = 0;
+  const tolls = [];
+
+  for (const s of route.sections) {
+    if (s.polyline) { const pts = decodeFlex(s.polyline); all = all.concat(pts); L.polyline(pts, {color:'#0b5fff', weight:5}).addTo(layers); }
+    length += s.summary ? s.summary.length : 0;
+    dur += s.summary ? s.summary.duration : 0;
+    for (const t of (s.tolls || [])) {
+      const fares = (t.fares || []).map(f => {
+        const c = f.convertedPrice || f.price;
+        return {value: c.value, currency: c.currency, name: f.name, pay: (f.paymentMethods || []).join(', ')};
+      }).filter(f => f.currency === cur);
+      if (!fares.length) { tolls.push({country: t.countryCode, name: (t.tollSystem || 'Putarina'), unknown: true}); continue; }
+      fares.sort((a, b) => a.value - b.value);
+      const f = fares[0];
+      tolls.push({country: t.countryCode, name: t.tollSystem || f.name || 'Putarina', fare: f.name, value: f.value, pay: f.pay});
+    }
+    if (s.departure && s.departure.place) L.marker([s.departure.place.location.lat, s.departure.place.location.lng]).addTo(layers);
+  }
+  const last = route.sections[route.sections.length - 1];
+  if (last && last.arrival) L.marker([last.arrival.place.location.lat, last.arrival.place.location.lng]).addTo(layers);
+  if (all.length) map.fitBounds(L.latLngBounds(all), {padding:[30,30]});
+
+  const byC = {};
+  tolls.forEach(t => (byC[t.country] = byC[t.country] || []).push(t));
+  const total = tolls.reduce((a, t) => a + (t.value || 0), 0);
+  const unknown = tolls.filter(t => t.unknown).length;
+
+  let h = `<div class="total"><div><small>Ukupna putarina</small><span class="big">${money(total, cur)}</span></div>
+    <div><small>Kilometraža</small><b>${(length/1000).toFixed(1)} km</b></div>
+    <div><small>Vrijeme vožnje</small><b>${fmtDur(dur)}</b></div></div>`;
+  if (!tolls.length) h += '<p class="note">Na ovoj ruti izvor podataka ne prijavljuje putarine.</p>';
+  else {
+    h += '<table><thead><tr><th>Putarina / sistem</th><th>Plaćanje</th><th class="n">Iznos</th></tr></thead><tbody>';
+    for (const c of Object.keys(byC)) {
+      const sub = byC[c].reduce((a, t) => a + (t.value || 0), 0);
+      const name = countryName(iso3to2[c] || c);
+      h += `<tr class="cty"><td colspan="2">${name}</td><td class="n">${money(sub, cur)}</td></tr>`;
+      byC[c].forEach(t => h += `<tr><td>${esc(t.name)}${t.fare ? ' — ' + esc(t.fare) : ''}</td><td>${esc(t.pay || '')}</td><td class="n">${t.unknown ? 'nema cijene u ' + cur : money(t.value, cur)}</td></tr>`);
+    }
+    h += '</tbody></table>';
+  }
+  if (unknown) h += `<p class="err">Za ${unknown} naplatnih tačaka cijena nije dostupna u odabranoj valuti — ukupan iznos je nepotpun.</p>`;
+  h += '<p class="note">Za svaku naplatnu tačku prikazan je najjeftiniji dostupni način plaćanja. Cijene dolaze iz baze putarina HERE; prije komercijalne upotrebe provjerite ključne dionice kod operatera.</p>';
+  $('#out').innerHTML = h;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+</script>
+</body>
+</html>
